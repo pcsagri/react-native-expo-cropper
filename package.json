@@ -1,0 +1,40 @@
+{
+  "name": "react-native-expo-cropper",
+  "version": "3.3.3",
+  "description": "Recadrage polygonal d'images.",
+  "main": "index.js",
+  "author": "ESSAFI MARWANE",
+  "license": "PCS AGRI",
+  "keywords": [
+    "react-native",
+    "expo",
+    "image-cropper",
+    "camera",
+    "polygonal",
+    "image",
+    "react-native-component"
+  ],
+  "peerDependencies": {
+    "expo": "53.0.9",
+    "react": "19.0.0",
+    "react-native": "0.79.2"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "14.1.0",
+    "expo": "53.0.9",
+    "expo-camera": "16.1.6",
+    "expo-image-manipulator": "13.1.6",
+    "expo-image-picker": "16.1.4",
+    "expo-media-library": "17.1.6",
+    "expo-screen-orientation": "8.1.6",
+    "react-native-svg": "15.11.2",
+    "react-native-view-shot": "4.0.3"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pcsagri/react-native-expo-cropper.git"
+  }
+}
