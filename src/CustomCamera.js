@@ -41,6 +41,7 @@ useEffect(() => {
   
         const photo = await cameraRef.current.takePictureAsync({
         quality: 1,
+        skipProcessing: true,
       });
 
   

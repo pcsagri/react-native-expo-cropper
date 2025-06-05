@@ -58,7 +58,7 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
 
   const initializeCropBox = () => {
     const { width, height } = imageMeasure.current;
-    if (width === 0 || height === 0 || points.length > 0) return;
+    // if (width === 0 || height === 0 || points.length > 0) return;
     const boxWidth = width * 0.6;
     const boxHeight = height * 0.6;
     const centerX = width / 2;
@@ -120,7 +120,7 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
   };
 
   const handleReset = () => {
-    setPoints([]);
+    // setPoints([]);
     initializeCropBox();
   };
 

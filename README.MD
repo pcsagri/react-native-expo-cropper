@@ -1,15 +1,15 @@
-# polygonal-image-cropper
+# react-native-expo-cropper
 
 Un composant React Native basé sur Expo pour recadrer une image de manière polygonale à partir de la galerie ou de la caméra.
 
 ## 🔧 Installation
 
 ```bash
-npm install polygonal-image-cropper
+npm install react-native-expo-cropper
 
 Ou
 
-yarn add polygonal-image-cropper
+yarn add react-native-expo-cropper
 
 
 EXPO SDK 53 -------------------------------------------------------------
@@ -34,7 +34,7 @@ EXPO SDK 53 -------------------------------------------------------------
 
 ------------------------------ DO THIS IN YOUR APP SCREEN CODE !!!!!!!!!! :-------------------------------
 
-import ImageCropper from 'polygonal-image-cropper/src/ImageCropper';
+import ImageCropper from 'react-native-expo-cropper/src/ImageCropper';
 
 
   const [crop, setCrop] = useState(false);
