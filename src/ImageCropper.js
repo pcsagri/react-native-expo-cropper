@@ -147,9 +147,9 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
               <TouchableOpacity
                 style={styles.button}
                   onPress={async () => {
-                        setShowFullScreenCapture(true); 
+                        // setShowFullScreenCapture(true); 
                         setIsLoading(true);
-                        setShowResult(true);
+                        // setShowResult(true);
                         try {
                           await new Promise((resolve) => requestAnimationFrame(resolve));
                           const capturedUri = await captureRef(viewRef, {
