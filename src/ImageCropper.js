@@ -108,10 +108,31 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
   const handleMove = (e) => {
     if (showResult || selectedPointIndex.current === null) return;
     const { locationX: moveX, locationY: moveY } = e.nativeEvent;
-    const boundedX = Math.max(0, Math.min(moveX, imageMeasure.current.width));
-    const boundedY = Math.max(0, Math.min(moveY, imageMeasure.current.height));
+  
+    const width = imageMeasure.current.width;
+    const height = imageMeasure.current.height;
+  
+    // Bound the movement
+    const boundedX = Math.max(0, Math.min(moveX, width));
+    const boundedY = Math.max(0, Math.min(moveY, height));
+  
+    // Define a threshold — if dragged beyond this, cancel
+    const edgeThreshold = 10;
+    const isNearEdge =
+      boundedX <= edgeThreshold || boundedX >= width - edgeThreshold ||
+      boundedY <= edgeThreshold || boundedY >= height - edgeThreshold;
+  
+    if (isNearEdge) {
+      // Cancel drag
+      selectedPointIndex.current = null;
+      return;
+    }
+  
+    // Safe to update point
     setPoints(prev =>
-      prev.map((p, i) => i === selectedPointIndex.current ? { x: boundedX, y: boundedY } : p)
+      prev.map((p, i) =>
+        i === selectedPointIndex.current ? { x: boundedX, y: boundedY } : p
+      )
     );
   };
 
@@ -149,7 +170,7 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
                   onPress={async () => {
                         // setShowFullScreenCapture(true); 
                         setIsLoading(true);
-                        // setShowResult(true);
+                        setShowResult(true);
                         try {
                           await new Promise((resolve) => requestAnimationFrame(resolve));
                           const capturedUri = await captureRef(viewRef, {
@@ -197,7 +218,7 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
               <Svg style={styles.overlay}>
                 <Path
                   d={`M 0 0 H ${imageMeasure.current.width} V ${imageMeasure.current.height} H 0 Z ${createPath()}`}
-                  fill={showResult ? 'black' : 'rgba(0, 0, 0, 0.7)'}
+                  fill={showResult ? 'white' : 'rgba(255, 255, 255, 0.8)'}
                   fillRule="evenodd"
                 />
                 {!showResult && points.length > 0 && (
