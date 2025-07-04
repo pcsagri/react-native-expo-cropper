@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
   width: IMAGE_WIDTH,
-  height: IMAGE_HEIGHT,
+  height: "80%",
   justifyContent: 'center',
   alignItems: 'center',
   overflow: 'hidden',

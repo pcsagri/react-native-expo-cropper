@@ -20,6 +20,7 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
 
   const [isLoading, setIsLoading] = useState(false);
   const [showFullScreenCapture, setShowFullScreenCapture] = useState(false);
+  const lastValidPosition = useRef(null);
   
 
 
@@ -94,44 +95,58 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
     if (!image || showResult) return;
     const now = Date.now();
     const { locationX: tapX, locationY: tapY } = e.nativeEvent;
+  
     if (lastTap.current && now - lastTap.current < 300) {
       const exists = points.some(p => Math.abs(p.x - tapX) < 15 && Math.abs(p.y - tapY) < 15);
       if (!exists) setPoints([...points, { x: tapX, y: tapY }]);
       lastTap.current = null;
     } else {
       const index = points.findIndex(p => Math.abs(p.x - tapX) < 20 && Math.abs(p.y - tapY) < 20);
-      if (index !== -1) selectedPointIndex.current = index;
+      if (index !== -1) {
+        selectedPointIndex.current = index;
+        lastValidPosition.current = { ...points[index] }; // store original position before move
+      }
       lastTap.current = now;
     }
   };
 
   const handleMove = (e) => {
     if (showResult || selectedPointIndex.current === null) return;
-    const { locationX: moveX, locationY: moveY } = e.nativeEvent;
   
+    const { locationX: moveX, locationY: moveY } = e.nativeEvent;
     const width = imageMeasure.current.width;
     const height = imageMeasure.current.height;
   
-    // Bound the movement
     const boundedX = Math.max(0, Math.min(moveX, width));
     const boundedY = Math.max(0, Math.min(moveY, height));
   
-    // Define a threshold — if dragged beyond this, cancel
     const edgeThreshold = 10;
-    const isNearEdge =
-      boundedX <= edgeThreshold || boundedX >= width - edgeThreshold ||
+    const isNearTopOrBottomEdge =
       boundedY <= edgeThreshold || boundedY >= height - edgeThreshold;
   
-    if (isNearEdge) {
-      // Cancel drag
+    const isNearLeftOrRightEdge =
+      boundedX <= edgeThreshold || boundedX >= width - edgeThreshold;
+  
+    if (isNearTopOrBottomEdge || isNearLeftOrRightEdge) {
+      // Reset point to last known position
+      if (lastValidPosition.current && selectedPointIndex.current !== null) {
+        setPoints(prev =>
+          prev.map((p, i) =>
+            i === selectedPointIndex.current ? lastValidPosition.current : p
+          )
+        );
+      }
       selectedPointIndex.current = null;
       return;
     }
   
-    // Safe to update point
+    // Valid move — update point and store as new last valid position
+    const updatedPoint = { x: boundedX, y: boundedY };
+    lastValidPosition.current = updatedPoint;
+  
     setPoints(prev =>
       prev.map((p, i) =>
-        i === selectedPointIndex.current ? { x: boundedX, y: boundedY } : p
+        i === selectedPointIndex.current ? updatedPoint : p
       )
     );
   };
