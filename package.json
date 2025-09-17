@@ -1,6 +1,6 @@
 {
   "name": "react-native-expo-cropper",
-  "version": "1.0.7",
+  "version": "1.0.9",
   "description": "Recadrage polygonal d'images.",
   "main": "index.js",
   "author": "PCS AGRI",
@@ -15,19 +15,19 @@
     "react-native-component"
   ],
   "peerDependencies": {
-    "expo": "53.0.9",
-    "react": "19.0.0",
-    "react-native": "0.79.2"
+    "expo": "54.0.0",
+    "react": "19.1.0",
+    "react-native": "0.81.4"
   },
   "dependencies": {
-    "@expo/vector-icons": "14.1.0",
-    "expo": "53.0.9",
-    "expo-camera": "16.1.6",
-    "expo-image-manipulator": "13.1.6",
-    "expo-image-picker": "16.1.4",
-    "expo-media-library": "17.1.6",
-    "expo-screen-orientation": "8.1.6",
-    "react-native-svg": "15.11.2",
+    "@expo/vector-icons": "^15.0.2",
+    "expo": "^54.0.0",
+    "expo-camera": "~17.0.8",
+    "expo-image-manipulator": "~14.0.7",
+    "expo-image-picker": "~17.0.8",
+    "expo-media-library": "~18.2.0",
+    "expo-screen-orientation": "~9.0.7",
+    "react-native-svg": "15.12.1",
     "react-native-view-shot": "4.0.3"
   },
   "engines": {
