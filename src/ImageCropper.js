@@ -40,26 +40,9 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
 }, [openCameraFirst, initialImage]);
 
 
-  useEffect(() => {
-  if (!image) return;
-
-  Image.getSize(image, (imgWidth, imgHeight) => {
-    const screenRatio = SCREEN_WIDTH / SCREEN_HEIGHT;
-    const imageRatio = imgWidth / imgHeight;
-
-    if (imageRatio > screenRatio) {
-      imageMeasure.current = {
-        width: SCREEN_WIDTH,
-        height: SCREEN_WIDTH / imageRatio,
-      };
-    } else {
-      imageMeasure.current = {
-        width: SCREEN_HEIGHT * imageRatio,
-        height: SCREEN_HEIGHT,
-      };
-    }
-  });
-}, [image]);
+  // Measure based strictly on actual layout, not screen ratio
+  // to avoid mismatches that truncate the selectable bottom area
+  // (onImageLayout handles measurement updates)
 
   // Perform capture after UI commits (avoids iOS timer/RAF awaits)
   // iOS capture logic using useEffect with overlay readiness
@@ -95,6 +78,53 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
     doCapture();
     return () => { cancelled = true; };
   }, [captureRequested, showResult, overlayReady, addheight, onConfirm]);
+
+  // Helpers to compute crop rectangle in original image pixels
+  const getImageSizeAsync = (uri) =>
+    new Promise((resolve, reject) => {
+      Image.getSize(uri, (w, h) => resolve({ width: w, height: h }), reject);
+    });
+
+  const computeCropRect = (pts, measure, origW, origH) => {
+    const containerW = measure.width;
+    const containerH = measure.height;
+    if (!containerW || !containerH || !origW || !origH || !pts || pts.length === 0) return null;
+
+    const ratio = origH / origW;
+    let dispW, dispH, offX, offY;
+    if (containerW * ratio <= containerH) {
+      // image constrained by width
+      dispW = containerW;
+      dispH = containerW * ratio;
+      offX = 0;
+      offY = (containerH - dispH) / 2;
+    } else {
+      // image constrained by height
+      dispH = containerH;
+      dispW = containerH / ratio;
+      offY = 0;
+      offX = (containerW - dispW) / 2;
+    }
+
+    const xs = pts.map(p => Math.max(0, Math.min(dispW, p.x - offX)));
+    const ys = pts.map(p => Math.max(0, Math.min(dispH, p.y - offY)));
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    const normMinX = minX / dispW;
+    const normMaxX = maxX / dispW;
+    const normMinY = minY / dispH;
+    const normMaxY = maxY / dispH;
+
+    const originX = Math.round(normMinX * origW);
+    const originY = Math.round(normMinY * origH);
+    const widthPx = Math.round((normMaxX - normMinX) * origW);
+    const heightPx = Math.round((normMaxY - normMinY) * origH);
+
+    return { x: originX, y: originY, width: widthPx, height: heightPx };
+  };
 
 
   const initializeCropBox = () => {
@@ -160,26 +190,6 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
     const boundedX = Math.max(0, Math.min(moveX, width));
     const boundedY = Math.max(0, Math.min(moveY, height));
   
-    const edgeThreshold = 10;
-    const isNearTopOrBottomEdge =
-      boundedY <= edgeThreshold || boundedY >= height - edgeThreshold;
-  
-    const isNearLeftOrRightEdge =
-      boundedX <= edgeThreshold || boundedX >= width - edgeThreshold;
-  
-    if (isNearTopOrBottomEdge || isNearLeftOrRightEdge) {
-      // Reset point to last known position
-      if (lastValidPosition.current && selectedPointIndex.current !== null) {
-        setPoints(prev =>
-          prev.map((p, i) =>
-            i === selectedPointIndex.current ? lastValidPosition.current : p
-          )
-        );
-      }
-      selectedPointIndex.current = null;
-      return;
-    }
-  
     // Valid move — update point and store as new last valid position
     const updatedPoint = { x: boundedX, y: boundedY };
     lastValidPosition.current = updatedPoint;
@@ -211,8 +221,8 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
         />
       ) : (
         <>
-          {!showResult && (
-            <View style={image ? styles.buttonContainer : styles.centerButtonsContainer}>
+          {!showResult && !image && (
+            <View pointerEvents="box-none" style={styles.centerButtonsContainer}>
  
               {image && (
                 <TouchableOpacity style={styles.button} onPress={handleReset}>
@@ -276,6 +286,7 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
             >
               <Image source={{ uri: image }} style={styles.image} onLayout={onImageLayout} />
               <Svg
+                pointerEvents="none"
                 key={showResult ? 'mask' : 'edit'}
                 style={styles.overlay}
                 onLayout={() => {
@@ -294,6 +305,33 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
                   <Circle key={index} cx={point.x} cy={point.y} r={10} fill="white" />
                 ))}
               </Svg>
+           </View>
+          )}
+          {!showResult && image && (
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.button} onPress={handleReset}>
+                <Text style={styles.buttonText}>Reset</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={async () => {
+                  try {
+                    setIsLoading(true);
+                    const { width: origW, height: origH } = await getImageSizeAsync(image);
+                    const rect = computeCropRect(points, imageMeasure.current, origW, origH);
+                    const enhancedUri = await enhanceImage(image, addheight, rect);
+                    const name = `IMAGE XTK${Date.now()}.png`;
+                    if (onConfirm) onConfirm(enhancedUri, name);
+                  } catch (error) {
+                    console.error('Erreur lors de la capture :', error);
+                    alert('Erreur lors de la capture !');
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+              >
+                <Text style={styles.buttonText}>Confirm</Text>
+              </TouchableOpacity>
             </View>
           )}
         </>
