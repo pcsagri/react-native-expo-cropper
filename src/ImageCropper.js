@@ -1,6 +1,6 @@
 import styles from './ImageCropperStyles';
 import React, { useState, useRef, useEffect } from 'react';
-import { Modal,View, Image, Dimensions, TouchableOpacity, Animated, Text } from 'react-native';
+import { Modal,View, Image, Dimensions, TouchableOpacity, Animated, Platform , Text } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 import CustomCamera from './CustomCamera';
@@ -21,6 +21,11 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
   const [isLoading, setIsLoading] = useState(false);
   const [showFullScreenCapture, setShowFullScreenCapture] = useState(false);
   const lastValidPosition = useRef(null);
+  const [captureRequested, setCaptureRequested] = useState(false);
+  const [overlayReady, setOverlayReady] = useState(false);
+
+  // Local screen size used for imageMeasure calculation
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
   
 
 
@@ -55,6 +60,41 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
     }
   });
 }, [image]);
+
+  // Perform capture after UI commits (avoids iOS timer/RAF awaits)
+  // iOS capture logic using useEffect with overlay readiness
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    if (!captureRequested || !showResult || !overlayReady || !viewRef.current) return;
+
+    let cancelled = false;
+    const doCapture = async () => {
+      try {
+        const capturedUri = await captureRef(viewRef.current, {
+          format: 'png',
+          quality: 1,
+        });
+        const enhancedUri = await enhanceImage(capturedUri ,addheight);
+        const name = `IMAGE XTK${Date.now()}.png`;
+        if (!cancelled && onConfirm) {
+          onConfirm(enhancedUri, name);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la capture :", error);
+        alert("Erreur lors de la capture !");
+      } finally {
+        if (!cancelled) {
+          setShowResult(false);
+          setIsLoading(false);
+          setShowFullScreenCapture(false);
+          setCaptureRequested(false);
+          setOverlayReady(false);
+        }
+      }
+    };
+    doCapture();
+    return () => { cancelled = true; };
+  }, [captureRequested, showResult, overlayReady, addheight, onConfirm]);
 
 
   const initializeCropBox = () => {
@@ -183,34 +223,39 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
               <TouchableOpacity
                 style={styles.button}
                   onPress={async () => {
-                        // setShowFullScreenCapture(true); 
-                        setIsLoading(true);
-                        setShowResult(true);
-                        try {
-                          await new Promise((resolve) => requestAnimationFrame(resolve));
-                          const capturedUri = await captureRef(viewRef, {
-                            format: 'png',
-                            quality: 1,
-                          });
-
-                        
-                        const enhancedUri = await enhanceImage(capturedUri ,addheight);
-                        const name = `IMAGE XTK${Date.now()}.png`;
-
+                    setIsLoading(true);
+                    setShowResult(true);
+                    setOverlayReady(false);
+                    setCaptureRequested(true);
                     
-                    if (onConfirm) {
-                      onConfirm(enhancedUri, name);
+                    // Android capture logic using requestAnimationFrame
+                    if (Platform.OS === 'android') {
+                      try {
+                        await new Promise((resolve) => requestAnimationFrame(resolve));
+                        const capturedUri = await captureRef(viewRef.current, {
+                          format: 'png',
+                          quality: 1,
+                        });
+                        const enhancedUri = await enhanceImage(capturedUri, addheight);
+                        const name = `IMAGE XTK${Date.now()}.png`;
+                        
+                        if (onConfirm) {
+                          onConfirm(enhancedUri, name);
+                        }
+                        
+                        setShowResult(false);
+                        setIsLoading(false);
+                        setShowFullScreenCapture(false);
+                        setCaptureRequested(false);
+                        setOverlayReady(false);
+                      } catch (error) {
+                        console.error("Erreur lors de la capture :", error);
+                        alert("Erreur lors de la capture !");
+                        setIsLoading(false);
+                      }
                     }
-                  } catch (error) {
-                    console.error("Erreur lors de la capture :", error);
-                    alert("Erreur lors de la capture !");
-                  } finally {
-                    setShowResult(false);
-                    setIsLoading(false);
-                    setShowFullScreenCapture(false);
-                  }
-                }}
-  >
+                  }}
+              >
     <Text style={styles.buttonText}>Confirm</Text>
   </TouchableOpacity>
 )}
@@ -230,7 +275,13 @@ const ImageCropper = ({ onConfirm, openCameraFirst, initialImage ,addheight}) =>
               onResponderRelease={handleRelease}
             >
               <Image source={{ uri: image }} style={styles.image} onLayout={onImageLayout} />
-              <Svg style={styles.overlay}>
+              <Svg
+                key={showResult ? 'mask' : 'edit'}
+                style={styles.overlay}
+                onLayout={() => {
+                  if (showResult) setOverlayReady(true);
+                }}
+              >
                 <Path
                   d={`M 0 0 H ${imageMeasure.current.width} V ${imageMeasure.current.height} H 0 Z ${createPath()}`}
                   fill={showResult ? 'white' : 'rgba(255, 255, 255, 0.8)'}

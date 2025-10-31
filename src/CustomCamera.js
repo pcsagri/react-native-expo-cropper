@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   Dimensions,
   Image,
+  Platform,
 } from 'react-native';
 import { Camera, CameraView } from 'expo-camera';
 const { width } = Dimensions.get('window');
@@ -37,7 +38,9 @@ useEffect(() => {
           setLoadingBeforeCapture(true);
         }, 1000);
   
-        await new Promise(resolve => setTimeout(resolve, 100));
+        if (Platform.OS === 'android') {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
   
         const photo = await cameraRef.current.takePictureAsync({
         quality: 1,
